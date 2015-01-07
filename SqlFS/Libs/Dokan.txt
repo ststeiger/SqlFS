@@ -1,0 +1,22 @@
+
+To Install the Dokan-Library under Windows 8, 
+you must execute the installation-file in complatibility mode for Windows 7. 
+To do that, right click on DokanInstall_0.6.0.exe, select "Properties", and set "compatibility mode" to "Windows 7".
+wählen “Eigenschaften” und stellen im Reiter “Kompatibilität” unter “Kompatibilitätsmodus” auf “Windows 7″ zurück.
+
+Dokan library contains LGPL and MIT licensed programs.
+
+LGPL license
+user-mode library (dokan.dll) 
+driver (dokan.sys)
+MIT license
+control program (dokanctl.exe)
+mount service (mouter.exe)
+samples (mirror.c)
+
+For detals, please check license files.
+GPL  license.gpl.txt
+LGPL license.lgpl.txt
+MIT  license.mit.txt
+
+You can obtain source codes from <http://dokan-dev.net/en/>

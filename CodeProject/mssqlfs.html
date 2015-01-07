@@ -1,0 +1,276 @@
+<!--------------------------------------------------------------------------->
+<!--                        IGNORE THIS SECTION                            -->
+<html>
+<head>
+    <title>The Code Project</title>
+    <style>
+        BODY, P, TD
+        {
+            font-family: Verdana, Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+        }
+        H2, H3, H4, H5
+        {
+            color: #ff9900;
+            font-weight: bold;
+        }
+        H2
+        {
+            font-size: 13pt;
+        }
+        H3
+        {
+            font-size: 12pt;
+        }
+        H4
+        {
+            font-size: 10pt;
+            color: black;
+        }
+        PRE
+        {
+            background-color: #FBEDBB;
+            font-family: "Courier New" , Courier, mono;
+            white-space: pre;
+        }
+        CODE
+        {
+            color: #990000;
+            font-family: "Courier New" , Courier, mono;
+        }
+    </style>
+    <link rel="stylesheet" type="text/css" href="http://www.codeproject.com/styles/global.css">
+</head>
+<body bgcolor="#FFFFFF" color="#000000">
+    <!--------------------------------------------------------------------------->
+    <!-------------------------------     STEP 1      --------------------------->
+    <!--  Fill in the details (CodeProject will reformat this section for you) -->
+    <pre>
+Title:       FUSE(file system in userspace) for MS-SQL 
+Author:      Martin Nedopil 
+Email:       martin.nedopil@gmail.com
+Member ID:   2803714
+Language:    C# 2.0, T-SQL
+Platform:    C#, MS-SQL
+Technology:  C# & MS-SQL & Dokan
+Level:       Intermediate
+Description: file system using MS-SQL database as storage
+Section      C#, MS-SQL
+SubSection   Utilities
+License:     (<a href="http://www.codeproject.com/info/licenses.aspx">CPOL, CPL, MIT,
+    etc</a>)
+</pre>
+    <!-------------------------------     STEP 2      --------------------------->
+    <!--  Include download and sample image information.                       -->
+    <ul class="download">
+        <li><a href="http://martinnedopil.aspx.sk">xxxxxxxxxxxxOn line game demo</a></li>
+        <li><a href="mssqlfs_src.zip">xxxxxxxxxxxxxxxxDownload source - 48 Kb</a></li>
+    </ul>
+    <p>
+        No screenshots</p>
+    <!-------------------------------     STEP 3      --------------------------->
+    <!--  Add the article text. Please use simple formatting (<h2>, <p> etc)   -->
+    <h2>
+        Introduction</h2>
+    <p>
+        Every time I use Linux, I feel a piece of jealousy to see its filesystems. Not only NTFS, FAT32, but huge
+        palette of data storages included GDocs etc. Now I can raise head up! <a href="http://dokan-dev.net/en/">
+        Dokan rocks!</a>
+    </p>
+    <h2>
+        What is Dokan?</h2>
+    <p>
+        What Dokan is? Simply device driver encapsulated filesystem calls. By using proxy
+        functions gives programatically create response for ReadFile, WriteFile, FindFiles
+        and other core I/O operations. Even on .NET!  There are also Dokan.NET interface for using C#.<br />
+        Now you are enable to write your own filesystems. You can create your own filesystem
+        or you can be inspired by <a href="http://groups.google.com/group/dokan/web/filesystems-using-dokan">
+            another applications using Dokan </a>. What about filesystem using memory as
+        ramdisk, system used encrypted file as data storage? Mirroring of some disc or directories,
+        access to registry via filesystem, list of processes as files on attached disk?
+        Open your mind and try to find another use for Dokan. This article will help you.
+        You will be able to store your files on MS SQL database, copy, rename, update, delete
+        etc. Simply file versioning is also included. This was reason why I started play
+        with Dokan. Create external storage with some versioning, mounted as disk, easy
+        to use for end users. To create version of file, just add extension ".version" to the end of 
+        filename and copy to disk. File will be renamed to previous extension and previous version
+        of file receive version number. You can choose if you want to see all versions or only actual
+        version. 
+    </p>
+    <h2>
+        Prerequisities
+    </h2>
+    <p>
+        Installed <a href="http://dokan-dev.net/en/">Dokan</a>.
+        <br />
+        Download actual version (0.53) from Dokan main pages and install. (code was tested with version 0.52)
+    </p>
+    <p>
+        Prepared MS-SQL
+        <br />
+        For testing purposes is suitable MS-SQL Express edition on your PC, but I used SQL
+        server located on virtual machine to simulate some network traffic and network accidents.
+        For production be carefull and create special user account and allow to run stored
+        procedures for this account. Do not miss this step. It is good security strategy.<br />
+        On SQL machine run metadata script to create stored procedures used by C# application
+        and create table "DOKANFS", main and only table using by your app. If you want to
+        use another table, you have to rename all occurences in all stored procedures.
+        <br />
+        VS 2008 Standard edition. If you have Express edition, you have to use MS-SQL Express
+        on you machine. Express edition doesn`t allow remote connection to MS-SQL server.
+    </p>
+    <h2>
+        Play with code</h2>
+    <p>
+        Let`s peek into code to find some useful. As you can see files are "pre-loaded"
+        into simple <font color="aqua">Dictionary </font>object. Files are loaded from SQL
+        database when first ReadFile method call is used to receive datas. File is downloaded
+        and "ungzipped" if was gzipped. Files are gzipped when is written on SQL server
+        due to reduce network traffic. But if file has extension enlisted, file is not zipped.
+        <br />
+        File is readed and writed using FileCache objects. When file is closed, using Cleanup
+        procedure called by Dokan.NET. Cleanup procedure performs gzipping of data and call
+        SP WriteFile to store data into MS-SQL.
+    </p>
+    <pre>
+ public int Cleanup(string filename, DokanFileInfo info)
+        {
+            lock (FileCache)
+            {
+                if ((FileCache.ContainsKey(filename) == true) && (FileCache[filename].MemStream.Length > 0))
+                {
+                    using (SqlConnection conn = new SqlConnection(ConnectionString))
+                    {
+                        using (SqlCommand Cmd = new SqlCommand())
+                        {
+                            MemoryStream mem = ((FileCaching)FileCache[filename]).MemStream;
+                            Cmd.CommandText = "WriteFile";
+                            Cmd.Parameters.Add("@iszipped", SqlDbType.Bit, 1);
+                            Cmd.Parameters["@iszipped"].Value = 0;
+                            Cmd.Parameters.Add("@OriginalSize", SqlDbType.BigInt);
+                            Cmd.Parameters["@OriginalSize"].Value = mem.Length;
+
+                            if (this.ZippedExtension.ToLower().IndexOf(Path.GetExtension(Regex.Split(filename.ToLower(), ".version")[0])) == -1)
+                            {
+                                if (FileCache[filename].MemStream.Length > 256)
+                                {
+                                    Cmd.Parameters["@iszipped"].Value = 1;
+                                    MemoryStream dummy = new MemoryStream();
+                                    Compress(mem, dummy);
+                                    mem.SetLength(0);
+                                    dummy.WriteTo(mem);
+                                }
+                            }
+
+                            mem.Seek(0, SeekOrigin.Begin);
+                            Cmd.Parameters.Add("@data", SqlDbType.VarBinary, (int)mem.Length);
+                            Cmd.Parameters["@data"].SqlValue = mem.ToArray();
+
+                            Cmd.Parameters.AddWithValue("@filename", filename);
+
+                            Cmd.CommandType = CommandType.StoredProcedure;
+                            Cmd.Connection = conn;
+                            conn.Open();
+
+                            Cmd.ExecuteNonQuery();
+                            FileCache.Remove(filename);
+                        }
+                    }
+                }
+            };
+            return DokanNet.DOKAN_SUCCESS;
+        }
+
+</pre>
+    <p>
+    Code written in T-SQL on MS-SQL is not so complicated. The most complicated stored procedure is FindFiles, due
+    using versions.<br />
+    Drive to show old version of files or not is set first bit in content field of root directory "\". If is first
+    bit set to 1, procedure shows previous version in extension.
+    </p>
+    <pre>
+    ALTER PROCEDURE [dbo].[FindFiles]
+	(
+	@filename varchar(255)
+	)
+	
+AS
+    /*
+    exec FindFiles @filename = '\' 
+    */
+	SET NOCOUNT ON 
+	
+	if @filename = '\' set @filename = '\' else set @filename = @filename+'\'
+	
+	select filename, isdirectory, IsNull(OriginalSize,DATALENGTH([CONTENT])) as size, filename as fullfilename,
+	       LastAccessTime,LastWriteTime,CreationTime
+	  into #TEMP
+	  from DOKANFS 
+	 where (filename like @filename+'%' and FILENAME not like @filename+'%\%' and Version is null)
+	
+	/* all versions */
+	declare @allVersion int
+	select @allVersion = (isnull(cast(content as int),0) & 1) from DOKANFS where FILENAME = '\'
+	
+	if @allVersion = 1 begin
+	   select filename + '.'+ cast(ISNULL(version,'0') as varchar(10)) as filename, 
+	         isdirectory, 
+	         IsNull(OriginalSize,DATALENGTH([CONTENT])) as size, 
+	         filename+ '.'+ cast(ISNULL(version,'0') as varchar(10)) as fullfilename,
+	         LastAccessTime,LastWriteTime,CreationTime
+	  into #TEMP2
+	  from DOKANFS 
+	  where (filename like @filename+'%' and FILENAME not like @filename+'%\%' and Version is not null)
+	  update #TEMP2 set filename = SUBSTRING(filename, CHARINDEX(@filename,filename)+LEN(@filename),255)
+	  end
+	
+	
+	update #TEMP set filename = SUBSTRING(filename, CHARINDEX(@filename,filename)+LEN(@filename),255)
+	
+	insert into #TEMP (filename, isdirectory,size,fullfilename,LastAccessTime,LastWriteTime,CreationTime) 
+	       values ('.',1,0,'.',GETDATE(),GETDATE(),GETDATE())
+	if @filename <> '\' 
+	   insert into #TEMP (filename,isdirectory,size,fullfilename,LastAccessTime,LastWriteTime,CreationTime) 
+	          values ('..',1,0,'..',GETDATE(),GETDATE(),GETDATE())
+	
+	if @allVersion = 1 begin
+	   select * from #TEMP 
+	   union
+	   select * from #TEMP2
+	   order by filename
+	   
+	   end else begin
+	   
+	   select * from #TEMP 
+	   order by filename
+	   end
+	
+	RETURN
+    </pre>
+    <h2>
+        Points of Interest</h2>
+    <p>
+    Dokan in version 0.52 working great, but there are some unexpected behaviour when file was opened
+    by Notepad++. I`m still waiting when Dokan grow to be in use similar to TrueCrypt and its loading
+    drivers on demand.
+    </p>
+    <h2>
+        What is missing</h2>
+    <p>
+        Huge testing on various network. I tested this concept on 1Mbit VPN without any problems.<br />
+        This is only proof of concept, no code "beautifier" was aplied.<br />
+        Also some "registration" functions can be done.. for example prepare database by create all stored
+        procedures, create table etc.<br />
+        You can also use Azure, PostgreSQL, MySQL, Firebird, Oracle or any database you want to store data<br />
+        All code is published as is. I apologize for some inconvenience. Time passing too quickly for me and
+        I have other things to do not only this project. <br />
+        Enjoy this code and contact me, if you want participate on this project seriously. Some examples
+        of cloud using will be nice.
+    </p>
+    <h2>
+        History</h2>
+    <p>
+        This is the first release, proof of concept.
+        <!-------------------------------    That's it!   --------------------------->
+</body>
+</html>
