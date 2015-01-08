@@ -95,6 +95,7 @@ namespace Dokan
         public const int ERROR_INVALID_NAME = 123;
         public const int ERROR_FILE_EXISTS = 80;
         public const int ERROR_ALREADY_EXISTS = 183;
+        public const int ERROR_DIR_NOT_EMPTY = 145; //TODO: Check, from old version
 
         public const int DOKAN_SUCCESS = 0;
         public const int DOKAN_ERROR = -1; // General Error

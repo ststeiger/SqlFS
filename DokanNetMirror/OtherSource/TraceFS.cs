@@ -95,6 +95,25 @@ namespace AdvancedFS
             return this._wrappedSubject.GetFileInformation(filename, fileinfo, info);
         }
 
+
+
+
+        public int SetAllocationSize(string filename, long length, DokanFileInfo info)
+        {
+            throw new NotImplementedException();
+        }
+
+        public int FindFiles(string filename, System.Collections.ArrayList files, DokanFileInfo info)
+        {
+            List<FileInformation> newFiles = new List<FileInformation>(files.Count);
+            foreach (FileInformation file in files)
+            {
+                newFiles.Add(file);
+            } // Next file
+
+            return FindFiles(filename, newFiles, info);
+        }
+
         public int FindFiles(string filename, List<FileInformation> files, Dokan.DokanFileInfo info)
         {
             TraceOperation("FindFiles", filename, files, info);

@@ -8,11 +8,17 @@ using System.Collections;
 //using FileObject = System.IO.Stream;
 using System.Diagnostics;
 using ContextType = System.UInt32;
-using Windows;
+
 using System.Runtime.InteropServices;
+
+
+using Windows;
+
 
 namespace AdvancedFS
 {
+
+
     public class MirrorFS : Dokan.DokanOperations
     {
         #region DokanOperations Members
@@ -219,6 +225,26 @@ namespace AdvancedFS
             }
         }
 
+
+        public int SetAllocationSize(string filename, long length, DokanFileInfo info)
+        {
+            throw new NotImplementedException();
+        }
+
+
+        public int FindFiles(string filename, System.Collections.ArrayList files, DokanFileInfo info)
+        {
+            List<FileInformation> newFiles = new List<FileInformation>(files.Count);
+            foreach (FileInformation file in files)
+            {
+                newFiles.Add(file);
+            } // Next file
+
+            return FindFiles(filename, newFiles, info);
+        }
+
+
+        // Old one
         public int FindFiles(String filename, List<FileInformation> files, DokanFileInfo info)
         {
             string path = GetPath(filename);
@@ -324,6 +350,7 @@ namespace AdvancedFS
             {
                 Trace.WriteLine("Got exception: \n" + e.ToString());
 
+
                 // TODO: Find a more elegant way 
                 if (e.Message.Contains("The directory is not empty"))
                     return -DokanNet.ERROR_DIR_NOT_EMPTY;
@@ -347,6 +374,7 @@ namespace AdvancedFS
             if (info.Context != null)
             {
 		        // should close? or rename at closing?
+               
                 WinBase.CloseHandle(new IntPtr((int)info.Context));
 		        info.Context = null;
 	        }
