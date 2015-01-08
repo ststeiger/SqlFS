@@ -1,0 +1,12 @@
+Important notes:
+- Each file's Last-Access-Time is not updated intentionally to reduce amount of operations on file system 
+  (could easily be parameterized).
+- The error code in "WriteFile" for the "NotSupportedException" exception 
+  is not appropriate and should be changed.
+- File handles are limited to 31 bits, which could be a problem, 
+  but it's good for now (if CreateFile is called 10 times a second, 
+  it would take 2,485 days to have a wrap-around).
+
+TODO:
+- Handle File Locking
+- Rewrite DeleteDirectory exception handling more elegantly
