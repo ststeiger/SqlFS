@@ -1,6 +1,6 @@
 ﻿
 http://www.codeproject.com/Articles/102941/FUSE-file-system-in-userspace-for-Microsoft-SQL-us
-, is licensed under The Code Project Open License (CPOL)
+MSSQLFS is licensed under The Code Project Open License (CPOL)
 
 
 Preamble
